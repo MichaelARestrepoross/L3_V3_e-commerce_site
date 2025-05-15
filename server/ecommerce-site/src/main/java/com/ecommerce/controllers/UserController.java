@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -78,6 +79,31 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating user");
         }
     }
+
+    // Login a user - open to public
+    @PostMapping(value = "/login", consumes = {"application/x-www-form-urlencoded", "application/json"})
+    public ResponseEntity<?> loginUser(@RequestParam String username, @RequestParam String password, HttpServletRequest request) {
+        try {
+            return userRepository.findByUsername(username).map(existingUser -> {
+                if (passwordEncoder.matches(password, existingUser.getPassword())) {
+                    // Manually authenticate the user
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            username, password, List.of(new SimpleGrantedAuthority(existingUser.getRole())));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+    
+                    // Create session
+                    request.getSession(true).setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+    
+                    return ResponseEntity.ok(existingUser);
+                } else {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+                }
+            }).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error during login");
+        }
+    }
+    
 
     // Get a specific user by ID - requires ADMIN role
     @GetMapping("/{id}")
