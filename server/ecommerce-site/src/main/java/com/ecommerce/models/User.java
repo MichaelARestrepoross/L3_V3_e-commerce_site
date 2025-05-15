@@ -1,7 +1,6 @@
 package com.ecommerce.models;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,12 +14,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)  // Allow setting but not exposing
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(nullable = false)
+    private String role = "ROLE_USER";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -29,7 +30,7 @@ public class User {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
-
+    
     // Getters and setters
     public Long getId() {
         return id;
@@ -61,6 +62,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public LocalDateTime getCreatedAt() {

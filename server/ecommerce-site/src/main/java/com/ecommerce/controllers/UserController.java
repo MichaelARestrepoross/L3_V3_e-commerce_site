@@ -5,10 +5,12 @@ import com.ecommerce.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import java.util.List;
 
@@ -22,55 +24,54 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Get all users - requires authentication
+    // Get all users - requires ADMIN role
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
     }
-
 
     // Register a new user - open to public
     @PostMapping("/register")
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
-            // Log the incoming data for debugging
             System.out.println("Received registration request: " + user);
             System.out.println("Username: " + user.getUsername());
-            System.out.println("Password (plain): " + user.getPassword());
+            System.out.println("Password: " + user.getPassword());
             System.out.println("Email: " + user.getEmail());
+            System.out.println("Role: " + user.getRole());
 
-            // Validate the incoming user data
             if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
-                System.out.println("Password validation failed");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password cannot be null or empty");
             }
             if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
-                System.out.println("Username validation failed");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username cannot be null or empty");
             }
             if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
-                System.out.println("Email validation failed");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email cannot be null or empty");
             }
 
             // Check if username or email already exists
             if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-                System.out.println("Username already exists");
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
             }
             if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-                System.out.println("Email already exists");
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
+            }
+
+            // Set default role if not provided or incorrect
+            if (user.getRole() == null || user.getRole().trim().isEmpty()) {
+                user.setRole("ROLE_USER");
+            } else if (!user.getRole().startsWith("ROLE_")) {
+                user.setRole("ROLE_" + user.getRole().toUpperCase());
             }
 
             // Encode the password before saving
             String encodedPassword = passwordEncoder.encode(user.getPassword());
-            System.out.println("Encoded password: " + encodedPassword);  // Log the encoded password
             user.setPassword(encodedPassword);
 
-            // Save the user
             User savedUser = userRepository.save(user);
-            System.out.println("User created successfully with hashed password: " + savedUser.getPassword());
+            System.out.println("User created successfully with role: " + user.getRole());
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
         } catch (Exception e) {
             System.err.println("Error creating user: " + e.getMessage());
@@ -78,55 +79,20 @@ public class UserController {
         }
     }
 
-
-    // Login a user - open to public
-    @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        try {
-            // Log the incoming login data for debugging
-            System.out.println("Received login request for email: " + user.getEmail());
-            System.out.println("Password provided: " + user.getPassword());
-
-            // Check if the email exists
-            return userRepository.findByEmail(user.getEmail()).map(existingUser -> {
-                System.out.println("Found user in database: " + existingUser.getUsername());
-                System.out.println("Stored hashed password: " + existingUser.getPassword());
-
-                // Verify the password
-                if (passwordEncoder.matches(user.getPassword(), existingUser.getPassword())) {
-                    System.out.println("Login successful for: " + existingUser.getUsername());
-                    return ResponseEntity.ok("Login successful");
-                } else {
-                    System.out.println("Password mismatch for: " + user.getEmail());
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-                }
-            }).orElseGet(() -> {
-                System.out.println("User not found for email: " + user.getEmail());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-            });
-        } catch (Exception e) {
-            System.err.println("Error during login: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error during login");
-        }
-    }
-
-
-    
-
-
-    // Get a specific user by ID - requires authentication
+    // Get a specific user by ID - requires ADMIN role
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         return userRepository.findById(id)
                 .map(user -> ResponseEntity.ok(user))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    // Update user details - requires authentication
+    // Update user details - requires ADMIN role
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
         return userRepository.findById(id).map(user -> {
-            // Update fields if provided
             if (updatedUser.getUsername() != null && !updatedUser.getUsername().trim().isEmpty()) {
                 user.setUsername(updatedUser.getUsername());
             }
@@ -136,20 +102,24 @@ public class UserController {
             if (updatedUser.getEmail() != null && !updatedUser.getEmail().trim().isEmpty()) {
                 user.setEmail(updatedUser.getEmail());
             }
+            if (updatedUser.getRole() != null && !updatedUser.getRole().trim().isEmpty()) {
+                user.setRole(updatedUser.getRole());
+            }
 
             User savedUser = userRepository.save(user);
             return ResponseEntity.ok(savedUser);
-        }).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
+        }).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    // Delete a user - requires authentication
+    // Delete a user - requires ADMIN role
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         if (userRepository.existsById(id)) {
             userRepository.deleteById(id);
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
