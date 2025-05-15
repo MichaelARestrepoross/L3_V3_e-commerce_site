@@ -13,6 +13,20 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: inherit;
+  background-color: #ffffff;
+  color: #213547;
+}
+
+/* Remove flex centering from body */
+body, #root {
+  display: block;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -20,14 +34,6 @@ a {
 }
 a:hover {
   color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
@@ -43,6 +49,7 @@ button {
   font-weight: 500;
   font-family: inherit;
   background-color: #1a1a1a;
+  color: white;
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -64,5 +71,6 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+    color: #213547;
   }
 }
