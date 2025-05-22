@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import LogoutButton from './components/LogoutButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './pages/UserProfile'; 
+import ProductList from './pages/ProductList';
 
 function App() {
     return (
@@ -28,6 +29,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <UserProfile />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/products"
+                    element={
+                        <ProtectedRoute>
+                            <ProductList />
                         </ProtectedRoute>
                     }
                 />
