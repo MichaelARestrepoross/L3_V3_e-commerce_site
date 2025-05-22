@@ -73,6 +73,28 @@ public class UserController {
         }
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        String username = auth.getName();
+
+        return userRepository.findByUsername(username)
+                .map(user -> ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "username", user.getUsername(),
+                "email", user.getEmail(),
+                "role", user.getRole()
+                )))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    Map.of("error", "User not found")
+                ));
+    }
+
     // Login using Spring AuthenticationManager
     @PostMapping(value = "/login", consumes = {"application/x-www-form-urlencoded", "application/json"})
     public ResponseEntity<?> loginUser(@RequestParam String username, @RequestParam String password, HttpServletRequest request) {
