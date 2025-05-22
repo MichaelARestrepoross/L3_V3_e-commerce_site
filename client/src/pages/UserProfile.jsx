@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import './UserProfile.css';
 
 const UserProfile = () => {
     const [user, setUser] = useState(null);
     const [error, setError] = useState('');
+    const [editing, setEditing] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -12,7 +14,6 @@ const UserProfile = () => {
                 });
 
                 if (!res.ok) throw new Error('Not logged in');
-
                 const data = await res.json();
                 setUser(data);
             } catch (err) {
@@ -27,11 +28,27 @@ const UserProfile = () => {
     if (!user) return <p>Loading...</p>;
 
     return (
-        <div className="p-6 bg-white rounded shadow-md w-full max-w-md mx-auto mt-10">
-            <h2 className="text-2xl font-bold mb-4">User Profile</h2>
+        <div className="user-profile-container">
+            <h2>User Profile</h2>
             <p><strong>Username:</strong> {user.username}</p>
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Role:</strong> {user.role}</p>
+
+            <button onClick={() => setEditing(!editing)}>
+                {editing ? 'Cancel Edit' : 'Edit Profile'}
+            </button>
+
+            {editing && (
+                <form className="user-profile-form">
+                    <label>Email</label>
+                    <input type="email" defaultValue={user.email} />
+
+                    <label>Password</label>
+                    <input type="password" placeholder="New password" />
+
+                    <button type="submit">Save Changes</button>
+                </form>
+            )}
         </div>
     );
 };
