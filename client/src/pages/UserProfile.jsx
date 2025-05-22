@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './UserProfile.css';
 import MyProductList from '../components/MyProductList';
-
+import AddProductForm from '../components/AddProductForm';
 
 
 const UserProfile = () => {
@@ -12,6 +12,8 @@ const UserProfile = () => {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState(''); // 'success' | 'error'
+    const [productListKey, setProductListKey] = useState(0);
+
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -105,7 +107,11 @@ const UserProfile = () => {
             {/* Display the user's products */}
             <div className="my-products-section">
                 <h3>My Products</h3>
-                <MyProductList />
+                <MyProductList key={productListKey} />
+            </div>
+            <div className="add-product-section">
+                <h3>Add Product</h3>
+                <AddProductForm onProductAdded={() => setProductListKey(prev => prev + 1)} />
             </div>
         </div>
     );
