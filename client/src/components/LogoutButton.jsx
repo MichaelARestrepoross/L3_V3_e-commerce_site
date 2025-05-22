@@ -4,11 +4,20 @@ import { useNavigate } from 'react-router-dom';
 const LogoutButton = () => {
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // Clear the auth token from localStorage
+    const handleLogout = async () => {
+        try {
+            await fetch('http://localhost:8080/api/users/logout', {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    
         localStorage.removeItem('authToken');
         navigate('/login');
     };
+    
 
     return (
         <button
