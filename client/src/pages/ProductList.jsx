@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import './ProductList.css'; // custom CSS file
 
 const ProductList = () => {
     const [products, setProducts] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -22,22 +24,39 @@ const ProductList = () => {
         fetchProducts();
     }, []);
 
-    if (error) return <p className="text-red-500">{error}</p>;
+    const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <div className="max-w-4xl mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-4">All Products</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {products.map(product => (
-                    <div key={product.id} className="border rounded p-4 shadow">
-                        <h3 className="text-xl font-semibold">{product.name}</h3>
-                        <p>{product.description}</p>
-                        <p className="text-green-600 font-bold">${product.price.toFixed(2)}</p>
-                        {product.imageUrl && (
-                            <img src={product.imageUrl} alt={product.name} className="mt-2 max-h-40 object-cover" />
-                        )}
-                    </div>
-                ))}
+        <div className="product-list-container">
+            <h2>All Products</h2>
+
+            <input
+                type="text"
+                placeholder="Search products..."
+                className="search-bar"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+
+            {error && <p className="error-text">{error}</p>}
+
+            <div className="product-grid">
+                {filtered.length === 0 ? (
+                    <p>No products found.</p>
+                ) : (
+                    filtered.map(product => (
+                        <div key={product.id} className="product-card">
+                            <h3>{product.name}</h3>
+                            <p>{product.description}</p>
+                            <p className="price">${product.price.toFixed(2)}</p>
+                            {product.imageUrl && (
+                                <img src={product.imageUrl} alt={product.name} className="product-image" />
+                            )}
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
