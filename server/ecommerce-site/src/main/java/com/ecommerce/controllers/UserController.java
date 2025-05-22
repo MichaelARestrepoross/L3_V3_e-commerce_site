@@ -2,18 +2,20 @@ package com.ecommerce.controllers;
 
 import com.ecommerce.models.User;
 import com.ecommerce.repositories.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,6 +26,9 @@ public class UserController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     // Get all users - requires ADMIN role
     @GetMapping
@@ -36,12 +41,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
-            System.out.println("Received registration request: " + user);
-            System.out.println("Username: " + user.getUsername());
-            System.out.println("Password: " + user.getPassword());
-            System.out.println("Email: " + user.getEmail());
-            System.out.println("Role: " + user.getRole());
-
             if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password cannot be null or empty");
             }
@@ -52,7 +51,6 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email cannot be null or empty");
             }
 
-            // Check if username or email already exists
             if (userRepository.findByUsername(user.getUsername()).isPresent()) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
             }
@@ -60,47 +58,43 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
             }
 
-            // Set default role if not provided or incorrect
             if (user.getRole() == null || user.getRole().trim().isEmpty()) {
                 user.setRole("ROLE_USER");
             } else if (!user.getRole().startsWith("ROLE_")) {
                 user.setRole("ROLE_" + user.getRole().toUpperCase());
             }
 
-            // Encode the password before saving
-            String encodedPassword = passwordEncoder.encode(user.getPassword());
-            user.setPassword(encodedPassword);
-
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
             User savedUser = userRepository.save(user);
-            System.out.println("User created successfully with role: " + user.getRole());
+
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
         } catch (Exception e) {
-            System.err.println("Error creating user: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating user");
         }
     }
 
-    // Login a user - open to public
+    // Login using Spring AuthenticationManager
     @PostMapping(value = "/login", consumes = {"application/x-www-form-urlencoded", "application/json"})
     public ResponseEntity<?> loginUser(@RequestParam String username, @RequestParam String password, HttpServletRequest request) {
         try {
-            return userRepository.findByUsername(username).map(existingUser -> {
-                if (passwordEncoder.matches(password, existingUser.getPassword())) {
-                    // Manually authenticate the user
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            username, password, List.of(new SimpleGrantedAuthority(existingUser.getRole())));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+            System.out.println(">>> LOGIN ATTEMPT (Spring-managed)");
+            System.out.println(">>> passwordEncoder bean class: " + passwordEncoder.getClass().getName());
     
-                    // Create session
-                    request.getSession(true).setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password)
+            );
     
-                    return ResponseEntity.ok(existingUser);
-                } else {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-                }
-            }).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            request.getSession(true).setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+    
+            return ResponseEntity.ok(Map.of(
+                "token", "fake-jwt-token", // Replace with real JWT if needed
+                "username", username,
+                "role", authentication.getAuthorities().toString()
+            ));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error during login");
+            System.out.println(">>> LOGIN FAILED: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }
     
@@ -110,7 +104,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         return userRepository.findById(id)
-                .map(user -> ResponseEntity.ok(user))
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
@@ -149,7 +143,7 @@ public class UserController {
         }
     }
 
-    // Global exception handler for IllegalArgumentException
+    // Global exception handler
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
