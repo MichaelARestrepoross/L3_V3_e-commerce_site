@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './UserProfile.css';
+import MyProductList from '../components/MyProductList';
+
+
 
 const UserProfile = () => {
     const [user, setUser] = useState(null);
@@ -67,11 +70,11 @@ const UserProfile = () => {
             <p><strong>Username:</strong> {user.username}</p>
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Role:</strong> {user.role}</p>
-
+    
             <button onClick={() => setEditing(!editing)} className="edit-button">
                 {editing ? 'Cancel Edit' : 'Edit Profile'}
             </button>
-
+    
             {editing && (
                 <form className="user-profile-form" onSubmit={handleUpdate}>
                     <label>Email</label>
@@ -80,7 +83,7 @@ const UserProfile = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                     />
-
+    
                     <label>Password</label>
                     <input
                         type="password"
@@ -88,9 +91,9 @@ const UserProfile = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="New password"
                     />
-
+    
                     <button type="submit" className="save-button">Save Changes</button>
-
+    
                     {message && (
                         <p className={messageType === 'success' ? 'success-message' : 'error-message'}>
                             {message}
@@ -98,6 +101,12 @@ const UserProfile = () => {
                     )}
                 </form>
             )}
+    
+            {/* Display the user's products */}
+            <div className="my-products-section">
+                <h3>My Products</h3>
+                <MyProductList />
+            </div>
         </div>
     );
 };
