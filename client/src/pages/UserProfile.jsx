@@ -5,6 +5,10 @@ const UserProfile = () => {
     const [user, setUser] = useState(null);
     const [error, setError] = useState('');
     const [editing, setEditing] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState(''); // 'success' | 'error'
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -16,6 +20,7 @@ const UserProfile = () => {
                 if (!res.ok) throw new Error('Not logged in');
                 const data = await res.json();
                 setUser(data);
+                setEmail(data.email);
             } catch (err) {
                 setError('Failed to load profile');
             }
@@ -23,6 +28,35 @@ const UserProfile = () => {
 
         fetchUser();
     }, []);
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                setUser(updated);
+                setEditing(false);
+                setMessage('Profile updated successfully!');
+                setMessageType('success');
+            } else {
+                const errorText = await res.text();
+                throw new Error(errorText || 'Failed to update profile');
+            }
+        } catch (err) {
+            setMessage(err.message);
+            setMessageType('error');
+        }
+    };
 
     if (error) return <p className="text-red-500">{error}</p>;
     if (!user) return <p>Loading...</p>;
@@ -34,19 +68,34 @@ const UserProfile = () => {
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Role:</strong> {user.role}</p>
 
-            <button onClick={() => setEditing(!editing)}>
+            <button onClick={() => setEditing(!editing)} className="edit-button">
                 {editing ? 'Cancel Edit' : 'Edit Profile'}
             </button>
 
             {editing && (
-                <form className="user-profile-form">
+                <form className="user-profile-form" onSubmit={handleUpdate}>
                     <label>Email</label>
-                    <input type="email" defaultValue={user.email} />
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
 
                     <label>Password</label>
-                    <input type="password" placeholder="New password" />
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="New password"
+                    />
 
-                    <button type="submit">Save Changes</button>
+                    <button type="submit" className="save-button">Save Changes</button>
+
+                    {message && (
+                        <p className={messageType === 'success' ? 'success-message' : 'error-message'}>
+                            {message}
+                        </p>
+                    )}
                 </form>
             )}
         </div>
