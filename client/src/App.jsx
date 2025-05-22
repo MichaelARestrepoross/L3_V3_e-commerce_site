@@ -4,6 +4,7 @@ import LoginForm from './pages/LoginForm';
 import Navbar from './components/Navbar';
 import LogoutButton from './components/LogoutButton';
 import ProtectedRoute from './components/ProtectedRoute';
+import UserProfile from './pages/UserProfile'; 
 
 function App() {
     return (
@@ -19,6 +20,14 @@ function App() {
                                 <h2>Welcome to the Home Page!</h2>
                                 <LogoutButton />
                             </div>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/profile"
+                    element={
+                        <ProtectedRoute>
+                            <UserProfile />
                         </ProtectedRoute>
                     }
                 />
