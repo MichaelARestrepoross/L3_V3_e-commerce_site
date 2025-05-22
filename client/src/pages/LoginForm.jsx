@@ -11,7 +11,6 @@ const LoginForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Use URLSearchParams to format the data as form-urlencoded
             const formData = new URLSearchParams();
             formData.append("username", username);
             formData.append("password", password);
@@ -28,13 +27,15 @@ const LoginForm = () => {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('authToken', data.token);
-                alert(`Welcome, ${username}!`);  // Display welcome message
+                alert(`Welcome, ${username}!`);
                 navigate('/');
-            }else {
+            } else {
                 setError('Invalid credentials');
+                console.log("❌ Login failed:", await response.text());
             }
         } catch (err) {
             setError('Login failed');
+            console.error("🔥 Network error during login:", err);
         }
     };
     
